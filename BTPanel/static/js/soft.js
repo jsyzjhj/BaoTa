@@ -1465,32 +1465,64 @@ var soft = {
                             });
                         }
                     })
-
-                    if ($(".bt-soft-menu .bgw").text() === "安装扩展") {
-                        setTimeout(function () {
+                    setTimeout(function () {
+                        if ($(".bt-soft-menu .bgw").text() === "安装扩展") {
                             soft.get_tab_contents('set_php_config', obj);
-                        }, 3000)
-                    }
+                        }
+                    }, 3000)
                 })
                 break;
             case 'get_phpinfo':
-                var con = '<button id="btn_phpinfo" class="btn btn-default btn-sm" >' + lan.soft.phpinfo + '</button>';
-                $(".soft-man-con").html(con);
+                var con = '';
+                var p_status = { true: '<span style="color:green;">Yes</span>', false:'<span style="color:red;">No</span>'};
+                $.post('/ajax?action=php_info', { php_version: version }, function (php_info) {
+                    con += '<button id="btn_phpinfo" class="btn btn-default btn-sm" >' + lan.soft.phpinfo + '</button>'
+                    con += '<div class="php_info_group"><p>基本信息 </p>'
+                    con += '<table id="tab_php_status" class="table table-hover table-bordered" style="margin:0;padding:0">';
+                    con += '<tr><td>P版本</td><td>' + php_info.phpinfo.php_version + '</td><td>安装位置</td><td>' + php_info.phpinfo.php_path + '</td></tr>'
+                    con += '<tr><td>php.ini</td><td colspan="3">' + php_info.phpinfo.php_ini + '</td></tr>'
+                    con += '<tr><td>已加载</td><td colspan="3">' + php_info.phpinfo.modules + '</td></tr>'
+                    con += '</table></div>';
+                    Object.keys(php_info).sort().forEach(function (k) {
+                        if (k !== 'phpinfo') {
+                            con += '<div class="php_info_group"><p>' + php_info.phpinfo.keys[k] + '</p>'
+                            con += '<table id="tab_php_status" class="table table-hover table-bordered" style="margin:0;padding:0">';
+                            var nkey = 0;
+                            Object.keys(php_info[k]).forEach(function (key) {
+                                if (nkey == 0) con += '<tr>';
+                                con += '<td>' + key + '</td><td>' + p_status[php_info[k][key]] + '</td>'
+                                nkey++;
+                                if (nkey >= 3) {
+                                    nkey = 0;
+                                    con += '</tr>';
+                                }
+                            });
 
-                $('#btn_phpinfo').click(function () {
-                    var loadT = bt.load(lan.soft.get);
-                    bt.send('GetPHPInfo', 'ajax/GetPHPInfo', { version: version }, function (rdata) {
-                        loadT.close();
-                        bt.open({
-                            type: 1,
-                            title: "PHP-" + version + "-PHPINFO",
-                            area: ['70%', '90%'],
-                            closeBtn: 2,
-                            shadeClose: true,
-                            content: rdata.replace('a:link {color: #009; text-decoration: none; background-color: #fff;}', '').replace('a:link {color: #000099; text-decoration: none; background-color: #ffffff;}', '')
+                            con += '</table></div>';
+                        }
+                    })
+
+
+
+                    $(".soft-man-con").html(con);
+
+                    $('#btn_phpinfo').click(function () {
+                        var loadT = bt.load(lan.soft.get);
+                        bt.send('GetPHPInfo', 'ajax/GetPHPInfo', { version: version }, function (rdata) {
+                            loadT.close();
+                            bt.open({
+                                type: 1,
+                                title: "PHP-" + version + "-PHPINFO",
+                                area: ['70%', '90%'],
+                                closeBtn: 2,
+                                shadeClose: true,
+                                content: rdata.replace('a:link {color: #009; text-decoration: none; background-color: #fff;}', '').replace('a:link {color: #000099; text-decoration: none; background-color: #ffffff;}', '')
+                            })
                         })
                     })
-                })
+                });
+
+                
                 break;
             case 'config_edit':
                 bt.soft.php.get_php_config(version, function (rdata) {
@@ -1653,45 +1685,45 @@ var soft = {
             case 'set_fpm_config':
                 bt.soft.php.get_fpm_config(version, function (rdata) {
                     var datas = {
-                        '30': {
+                        '1GB内存': {
                             max_children: 30,
                             start_servers: 5,
                             min_spare_servers: 5,
                             max_spare_servers: 20
                         },
-                        '50': {
+                        '2GB内存': {
                             max_children: 50,
+                            start_servers: 5,
+                            min_spare_servers: 5,
+                            max_spare_servers: 30
+                        },
+                        '4GB内存': {
+                            max_children: 80,
+                            start_servers: 10,
+                            min_spare_servers: 10,
+                            max_spare_servers: 30
+                        },
+                        '8GB内存': {
+                            max_children: 120,
+                            start_servers: 10,
+                            min_spare_servers: 10,
+                            max_spare_servers: 30
+                        },
+                        '16GB内存': {
+                            max_children: 200,
                             start_servers: 15,
                             min_spare_servers: 15,
-                            max_spare_servers: 35
+                            max_spare_servers: 50
                         },
-                        '100': {
-                            max_children: 100,
+                        '32GB内存': {
+                            max_children: 300,
                             start_servers: 20,
                             min_spare_servers: 20,
-                            max_spare_servers: 70
-                        },
-                        '200': {
-                            max_children: 200,
-                            start_servers: 25,
-                            min_spare_servers: 25,
-                            max_spare_servers: 150
-                        },
-                        '300': {
-                            max_children: 300,
-                            start_servers: 30,
-                            min_spare_servers: 30,
-                            max_spare_servers: 180
-                        },
-                        '500': {
-                            max_children: 500,
-                            start_servers: 35,
-                            min_spare_servers: 35,
-                            max_spare_servers: 250
+                            max_spare_servers: 50
                         }
                     }
                     var limits = [], pmList = [];
-                    for (var k in datas) limits.push({ title: k + lan.soft.concurrency, value: k });
+                    for (var k in datas) limits.push({ title: k, value: k });
                     var _form_datas = [
                         {
                             title: lan.soft.concurrency_type, name: 'limit', value: rdata.max_children, type: 'select', items: limits, callback: function (iKey) {
@@ -1705,10 +1737,10 @@ var soft = {
                                 { title: lan.bt.dynamic, value: 'dynamic' }
                             ], ps: '*' + lan.soft.php_fpm_ps1
                         },
-                        { title: 'max_children', name: 'max_children', value: rdata.max_children, type: 'number', width: '100px', ps: '*' + lan.soft.php_fpm_ps2 },
-                        { title: 'start_servers', name: 'start_servers', value: rdata.start_servers, type: 'number', width: '100px', ps: '*' + lan.soft.php_fpm_ps3 },
-                        { title: 'min_spare_servers', name: 'min_spare_servers', value: rdata.min_spare_servers, type: 'number', width: '100px', ps: '*' + lan.soft.php_fpm_ps4 },
-                        { title: 'max_spare_servers', name: 'max_spare_servers', value: rdata.max_spare_servers, type: 'number', width: '100px', ps: '*' + lan.soft.php_fpm_ps5 },
+                        { title: 'max_children', name: 'max_children', value: rdata.max_children, type: 'number', width: '80px', ps: '*' + lan.soft.php_fpm_ps2 },
+                        { title: 'start_servers', name: 'start_servers', value: rdata.start_servers, type: 'number', width: '80px', ps: '*' + lan.soft.php_fpm_ps3 },
+                        { title: 'min_spare_servers', name: 'min_spare_servers', value: rdata.min_spare_servers, type: 'number', width: '80px', ps: '*' + lan.soft.php_fpm_ps4 },
+                        { title: 'max_spare_servers', name: 'max_spare_servers', value: rdata.max_spare_servers, type: 'number', width: '80px', ps: '*' + lan.soft.php_fpm_ps5 },
                         {
                             title: ' ', text: lan.public.save, name: 'btn_children_submit', css: 'btn-success', type: 'button', callback: function (ldata) {
                                 bt.pub.get_menm(function (memInfo) {
@@ -1755,7 +1787,18 @@ var soft = {
                         _c_form.append(_form.html)
                         clicks = clicks.concat(_form.clicks);
                     }
+                    _c_form.append('<ul class="help-info-text c7">\
+                                        <li>【最大子进程数量】越大，并发能力越强，但max_children最大不要超过5000</li>\
+                                        <li>【内存】每个PHP子进程需要20MB左右内存，过大的max_children会导致服务器不稳定</li>\
+                                        <li>【静态模式】下会始终维持设置的子进程数量，对内存开销较大，但并发能力较好</li>\
+                                        <li>【动态模式】下会按设置最大空闲进程数来收回进程，内存开销小，建议小内存机器使用</li>\
+                                        <li>【64GB内存推荐值】max_children<=1000 , start/min_spare=50 , max_spare<=200</li>\
+                                        <li>【多PHP版本】若您安装了多个PHP版本，且都在使用，建议适当降低并发配置</li>\
+                                        <li>【没有数据库】若没有安装mysql等数据库，建议设置2倍于推荐并发</li>\
+                                        <li>【注意】以上为建议配置说明，线上项目复杂多样，请根据实际情况酌情调整</li>\
+                                    </ul>')
                     tabCon.append(_c_form);
+                    
                     bt.render_clicks(clicks);
                 });
                 break;
@@ -2005,13 +2048,14 @@ var soft = {
     },
 
     input_zip: function (plugin_name, tmp_path) {
-        layer.msg('正在安装,这可能需要几分钟时间...', { icon: 16, time: 0, shade: [0.3, '#000'] });
-        $.post('/plugin?action=input_zip', { plugin_name: plugin_name, tmp_path: tmp_path }, function (rdata) {
-            layer.closeAll()
-            if (rdata.status) {
-                soft.get_list();
-            }
-            setTimeout(function () { layer.msg(rdata.msg, { icon: rdata.status ? 1 : 2 }) }, 1000);
+        bt.soft.show_speed_window('正在安装,这可能需要几分钟时间...',function(){
+            $.post('/plugin?action=input_zip', { plugin_name: plugin_name, tmp_path: tmp_path }, function (rdata) {
+                layer.closeAll()
+                if (rdata.status) {
+                    soft.get_list();
+                }
+                setTimeout(function () { layer.msg(rdata.msg, { icon: rdata.status ? 1 : 2 }) }, 1000);
+            });
         });
     }
 
